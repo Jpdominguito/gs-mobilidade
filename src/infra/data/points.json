@@ -1,0 +1,11 @@
+[
+  {"id": "P-001", "name": "Av. Paulista x Rua Augusta", "line": "875C-10", "neighborhood": "Consolação", "status": "OPERATING", "status_updated_at": "2026-11-09T08:30:00Z", "alternative_point_id": null, "note": null},
+  {"id": "P-002", "name": "Av. Paulista x Al. Santos", "line": "875C-10", "neighborhood": "Bela Vista", "status": "DELAYED", "status_updated_at": "2026-11-09T08:42:00Z", "alternative_point_id": "P-001", "note": "Trânsito intenso, atraso médio de 12 minutos"},
+  {"id": "P-003", "name": "Terminal Bandeira", "line": "8700-10", "neighborhood": "Centro", "status": "INTERRUPTED", "status_updated_at": "2026-11-09T07:55:00Z", "alternative_point_id": "P-004", "note": "Desvio por obra na Av. 23 de Maio"},
+  {"id": "P-004", "name": "Praça da Sé", "line": "8700-10", "neighborhood": "Sé", "status": "OPERATING", "status_updated_at": "2026-11-09T08:10:00Z", "alternative_point_id": null, "note": null},
+  {"id": "P-005", "name": "Estação Barra Funda", "line": "175T-10", "neighborhood": "Barra Funda", "status": "OPERATING", "status_updated_at": "2026-11-09T08:20:00Z", "alternative_point_id": null, "note": null},
+  {"id": "P-006", "name": "Largo 13 de Maio", "line": "5030-10", "neighborhood": "Santo Amaro", "status": "DELAYED", "status_updated_at": "2026-11-09T08:35:00Z", "alternative_point_id": "P-007", "note": "Fila de veículos no corredor, atraso médio de 8 minutos"},
+  {"id": "P-007", "name": "Av. Santo Amaro x R. Alexandre Dumas", "line": "5030-10", "neighborhood": "Santo Amaro", "status": "OPERATING", "status_updated_at": "2026-11-09T08:36:00Z", "alternative_point_id": null, "note": null},
+  {"id": "P-008", "name": "R. Teodoro Sampaio x Av. Rebouças", "line": "607U-10", "neighborhood": "Pinheiros", "status": "INTERRUPTED", "status_updated_at": "2026-11-09T06:50:00Z", "alternative_point_id": "P-009", "note": "Ponto fechado para manutenção da via"},
+  {"id": "P-009", "name": "Av. Rebouças x R. Henrique Schaumann", "line": "607U-10", "neighborhood": "Pinheiros", "status": "OPERATING", "status_updated_at": "2026-11-09T08:05:00Z", "alternative_point_id": null, "note": null}
+]

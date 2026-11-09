@@ -1,0 +1,304 @@
+openapi: 3.0.3
+info:
+  title: CitizenTech Mobilidade API
+  version: 1.0.0
+  description: >
+    Serviço da Secretaria de Mobilidade que informa o status de pontos de ônibus,
+    indica alternativa quando o ponto está degradado e responde perguntas do cidadão
+    com apoio de um modelo de linguagem, sempre limitado aos dados oficiais.
+    Este contrato é a fonte de verdade: o código do slice nasce dele.
+servers:
+  - url: http://localhost:8000
+tags:
+  - name: pontos
+  - name: ia
+  - name: operacao
+paths:
+  /health:
+    get:
+      tags: [operacao]
+      summary: Verifica se o serviço está de pé
+      operationId: getHealth
+      responses:
+        "200":
+          description: Serviço saudável
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /metrics:
+    get:
+      tags: [operacao]
+      summary: Métricas operacionais acumuladas desde o início do processo
+      operationId: getMetrics
+      responses:
+        "200":
+          description: Contadores e latência p95
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Metrics"
+  /points:
+    get:
+      tags: [pontos]
+      summary: Lista pontos com paginação por limit/offset
+      operationId: listPoints
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtra pelo status do ponto
+          schema:
+            $ref: "#/components/schemas/PointStatus"
+        - name: limit
+          in: query
+          required: false
+          description: Itens por página
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          description: Quantidade de itens a pular
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Página de pontos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /points/{point_id}:
+    get:
+      tags: [pontos]
+      summary: Consulta um ponto pelo código
+      operationId: getPoint
+      parameters:
+        - name: point_id
+          in: path
+          required: true
+          description: Código do ponto, por exemplo P-001
+          schema:
+            type: string
+            example: P-001
+      responses:
+        "200":
+          description: Ponto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Point"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /ask:
+    post:
+      tags: [ia]
+      summary: Pergunta em linguagem natural sobre pontos e linhas
+      description: >
+        A resposta é gerada por um LLM somente a partir dos dados oficiais.
+        Quando não há dado suficiente, o pedido é inseguro ou a resposta não
+        pode ser verificada, o serviço recusa com refused=true (status 200).
+      operationId: askQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AskRequest"
+      responses:
+        "200":
+          description: Resposta ou recusa explícita
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AskResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+components:
+  responses:
+    BadRequest:
+      description: Requisição malformada ou parâmetro de consulta inválido
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: VALIDATION_ERROR
+            message: "query.limit: Input should be greater than or equal to 1"
+            request_id: 3f9c1a2b7d10
+    NotFound:
+      description: Recurso inexistente
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: POINT_NOT_FOUND
+            message: Ponto P-999 não encontrado.
+            request_id: 3f9c1a2b7d10
+    Unprocessable:
+      description: Corpo bem formado, mas semanticamente inválido (pergunta vazia, longa ou com dado pessoal)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: INVALID_QUESTION
+            message: A pergunta parece conter dado pessoal (CPF). Remova e tente de novo.
+            request_id: 3f9c1a2b7d10
+    Unavailable:
+      description: Modelo de linguagem indisponível. O restante do serviço continua operando.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: LLM_UNAVAILABLE
+            message: Falha ao chamar o Ollama
+            request_id: 3f9c1a2b7d10
+  schemas:
+    PointStatus:
+      type: string
+      enum: [OPERATING, DELAYED, INTERRUPTED]
+    Point:
+      type: object
+      additionalProperties: false
+      required: [id, name, line, neighborhood, status, status_updated_at]
+      properties:
+        id:
+          type: string
+          example: P-002
+        name:
+          type: string
+        line:
+          type: string
+        neighborhood:
+          type: string
+        status:
+          $ref: "#/components/schemas/PointStatus"
+        status_updated_at:
+          type: string
+          format: date-time
+        alternative_point_id:
+          type: string
+          nullable: true
+          description: Ponto alternativo quando o status não é OPERATING
+        note:
+          type: string
+          nullable: true
+    PointPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Point"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+        offset:
+          type: integer
+        next_offset:
+          type: integer
+          nullable: true
+          description: Offset da próxima página, ou null na última
+    AskRequest:
+      type: object
+      additionalProperties: false
+      required: [question]
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 500
+        point_id:
+          type: string
+          pattern: "^P-\\d{3}$"
+          nullable: true
+          description: Restringe a resposta a um ponto específico
+    AskResponse:
+      type: object
+      additionalProperties: false
+      required: [answer, refused, sources]
+      properties:
+        answer:
+          type: string
+        refused:
+          type: boolean
+        refusal_reason:
+          type: string
+          nullable: true
+          enum: [NO_DATA, UNSAFE_INPUT, UNVERIFIED_ANSWER]
+        sources:
+          type: array
+          items:
+            type: string
+        model:
+          type: string
+          nullable: true
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status, llm_provider]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        llm_provider:
+          type: string
+    Metrics:
+      type: object
+      additionalProperties: false
+      required:
+        - requests_total
+        - errors_5xx_total
+        - error_rate
+        - latency_p95_ms
+        - asks_total
+        - refusals_total
+        - refusal_rate
+        - llm_failures_total
+        - tokens_in_total
+        - tokens_out_total
+      properties:
+        requests_total: {type: integer}
+        errors_5xx_total: {type: integer}
+        error_rate: {type: number}
+        latency_p95_ms: {type: number}
+        asks_total: {type: integer}
+        refusals_total: {type: integer}
+        refusal_rate: {type: number}
+        llm_failures_total: {type: integer}
+        tokens_in_total: {type: integer}
+        tokens_out_total: {type: integer}
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: POINT_NOT_FOUND
+        message:
+          type: string
+        request_id:
+          type: string
+          nullable: true
